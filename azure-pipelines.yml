@@ -15,14 +15,28 @@ steps:
     versionSpec: '8.15.0'
   displayName: 'Install Node.js'
 
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+    architecture: 'x64' 
+  displayName: 'Install Python'
+
+- script: |
+    python -m pip install --upgrade 
+    pip pip3 install slither-analyzer solc-select 
+    solc-select install 0.6.11
+    solc-select use 0.6.11 
+  displayName: 'Install dependencies'
+
 - script: |
     npm install
     npm run build
-  displayName: 'npm install and build'
+  displayName: 'NPM Install/Build'
 
 - script: |
     npx truffle test
-  displayName: 'run tests'
+  displayName: 'Run Unit Tests'
 
 - script: |
     cd src
