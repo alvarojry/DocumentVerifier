@@ -7,8 +7,7 @@ trigger:
 - main
 
 pool:
-  name: local 
-  vmImage: ubuntu-latest
+  name: local
 
 steps:
 - task: NodeTool@0
@@ -21,13 +20,10 @@ steps:
     npm run build
   displayName: 'npm install and build'
 
-- task: Npm@1
-  displayName: 'Compiling Smart Contract'
-
 - script: |
     cd src
     npx truffle compile contracts/$(contractName).sol
-  displayName: 'npm install and build'
+  displayName: 'Compile smart contract'
 
 - task: ArchiveFiles@2
   inputs:
