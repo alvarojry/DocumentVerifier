@@ -40,7 +40,8 @@ contract DocumentIdentifier {
 
     event DocumentHolderTokenRefreshed(
 		address documentHolder,
-        uint token
+        uint token,
+		bool tokenUsed
     );
 
     struct Document {
@@ -70,6 +71,12 @@ contract DocumentIdentifier {
         string id,
         string name
     );
+	
+	event DocumentVerified(
+		address documentHolder,
+		string documentId,
+		bool valid
+	);
 
     mapping(address => Issuer) public issuers;
 	mapping(uint => address) public issuersAddress;
@@ -142,10 +149,12 @@ contract DocumentIdentifier {
 	
 	function refreshToken() public {
 		DocumentHolder storage documentHolder = documentHolders[msg.sender];
+		string memory empty = "";
+		require(keccak256(abi.encodePacked(documentHolder.id)) != keccak256(abi.encodePacked(empty)));
 		documentHolder.token = random();
 		documentHolder.tokenUsed = false;
         documentHolder.tokenExpiration = now + 10 minutes;
-        emit DocumentHolderTokenRefreshed(msg.sender, documentHolder.token);
+        emit DocumentHolderTokenRefreshed(msg.sender, documentHolder.token, documentHolder.tokenUsed);
 	}
 
     function createVerifier(address _verifier, string memory _id, string memory _name) public {
@@ -166,55 +175,63 @@ contract DocumentIdentifier {
         return amount;
     }
 	
-	function verifyDocument(address _documentHolder, string memory documentId, uint token, string[] memory rules) public view returns (bool) {
-        Verifier storage verifier = verifiers[msg.sender];        
-        bool isValid;
+	function verifyDocument(address _documentHolder, string memory _documentId, uint _token, string[] memory rules) public {
+        bool isValid = true;
         string memory empty = "";
+		Verifier storage verifier = verifiers[msg.sender];
         DocumentHolder storage documentHolder = documentHolders[_documentHolder];
 		if (rules.length % 3 != 0 || keccak256(abi.encodePacked(documentHolder.id)) == keccak256(abi.encodePacked(empty)) || keccak256(abi.encodePacked(verifier.id)) == keccak256(abi.encodePacked(empty))
-            || documentHolder.token != token || documentHolder.tokenUsed == true || documentHolder.tokenExpiration >= now) {
-            isValid = false;
+            || documentHolder.token != _token || documentHolder.tokenUsed == true || documentHolder.tokenExpiration < now) {
+            isValid = false;			
         } else {
-            isValid = true;
+            Document storage document = documentHolder.documents[_documentId];
+			uint i = 0;
+			uint steps = rules.length / 3;
+			while (isValid ==  true && i < steps)
+			{
+				uint iVal = i * 3;
+				string memory identifier = rules[iVal];
+				string memory rule = rules[iVal+1];
+				string memory value = rules[iVal+2];
+				string memory documentAttribute = document.attributes[identifier];
+				if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("<"))) {
+					if ((keccak256(abi.encodePacked(documentAttribute)) < keccak256(abi.encodePacked(value)))) 
+					{
+						isValid = false;
+					}
+				} else if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked(">"))) {
+					if ((keccak256(abi.encodePacked(documentAttribute)) > keccak256(abi.encodePacked(value)))) 
+					{
+						isValid = false;
+					}
+				} else if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("<="))) {
+					if ((keccak256(abi.encodePacked(documentAttribute)) <= keccak256(abi.encodePacked(value)))) 
+					{
+						isValid = false;
+					}
+				} else if ((keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked(">=")))) {
+					if ((keccak256(abi.encodePacked(documentAttribute)) >= keccak256(abi.encodePacked(value)))) 
+					{
+						isValid = false;
+					}
+				} else if ((keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("=")))) {
+					if ((keccak256(abi.encodePacked(documentAttribute)) != keccak256(abi.encodePacked(value)))) 
+					{
+						isValid = false;
+					}
+				} else {
+					isValid = false;
+				}
+				i++;
+			}
         }
-        Document storage document = documentHolder.documents[documentId];        
-        uint i = 0;
-        while (isValid ==  true || i < rules.length / 3)
-        {
-            string memory identifier = rules[i];
-            string memory rule = rules[i+1];
-            string memory value = rules[i+2];
-            string memory documentAttribute = document.attributes[identifier];
-            if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("<"))) {
-				if ((keccak256(abi.encodePacked(documentAttribute)) < keccak256(abi.encodePacked(value)))) 
-                {
-                    isValid = false;
-                }
-            } else if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked(">"))) {
-				if ((keccak256(abi.encodePacked(documentAttribute)) > keccak256(abi.encodePacked(value)))) 
-                {
-                    isValid = false;
-                }
-            } else if (keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("<="))) {
-				if ((keccak256(abi.encodePacked(documentAttribute)) <= keccak256(abi.encodePacked(value)))) 
-                {
-                    isValid = false;
-                }
-            } else if ((keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked(">=")))) {
-				if ((keccak256(abi.encodePacked(documentAttribute)) >= keccak256(abi.encodePacked(value)))) 
-                {
-                    isValid = false;
-                }
-            } else if ((keccak256(abi.encodePacked(rule)) == keccak256(abi.encodePacked("=")))) {
-                if ((keccak256(abi.encodePacked(documentAttribute)) != keccak256(abi.encodePacked(value)))) 
-                {
-                    isValid = false;
-                }
-            } else {
-                isValid = false;
-            }
-            i++;
-        }
-        return isValid;
+		disableToken(_documentHolder);
+        emit DocumentVerified(_documentHolder, _documentId, isValid);
     }
+	
+	function disableToken(address _documentHolder) internal {
+		DocumentHolder storage documentHolder = documentHolders[_documentHolder];
+		documentHolder.tokenUsed = true;
+		documentHolder.tokenExpiration = now;
+	}
 }
