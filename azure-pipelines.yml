@@ -6,6 +6,9 @@
 trigger:
 - main
 
+variables:
+  contractName: 'DocumentIdentifier'
+
 pool:
   name: local
 
