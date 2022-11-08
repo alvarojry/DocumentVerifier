@@ -77,9 +77,9 @@ contract('DocumentIdentifier', ([deployer]) => {
 
 	before(async () => {
 	  resultFirstName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'FirstName', 'Alvaro', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
-	  resultSecondName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'SecondName', 'Alvaro', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
-	  resultLastName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'LastName', 'Alvaro', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
-	  resultSecondLastName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'SecondLastName', 'Alvaro', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
+	  resultSecondName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'SecondName', 'Jose', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
+	  resultLastName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'LastName', 'Reyes', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
+	  resultSecondLastName = await documentIdentifier.createDocumentAttribute('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', 'SecondLastName', 'Yepes', { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
     })
 	
 	it('creates first name', async () => {
@@ -93,21 +93,21 @@ contract('DocumentIdentifier', ([deployer]) => {
       // SUCCESS
 	  const event = resultSecondName.logs[0].args 
 	  assert.equal(event.documentAttribute, 'SecondName')
-	  assert.equal(event.documentValue, 'Alvaro')
+	  assert.equal(event.documentValue, 'Jose')
     })
 	
 	it('creates last name', async () => {
       // SUCCESS
 	  const event = resultLastName.logs[0].args 
 	  assert.equal(event.documentAttribute, 'LastName')
-	  assert.equal(event.documentValue, 'Alvaro')
+	  assert.equal(event.documentValue, 'Reyes')
     })
 	
 	it('creates second last name', async () => {
       // SUCCESS
 	  const event = resultSecondLastName.logs[0].args 
 	  assert.equal(event.documentAttribute, 'SecondLastName')
-	  assert.equal(event.documentValue, 'Alvaro')
+	  assert.equal(event.documentValue, 'Yepes')
     })
   })
   
@@ -130,20 +130,31 @@ contract('DocumentIdentifier', ([deployer]) => {
   })
   
   describe('verify', async () => {
-    let result, verifiersSize
+    let tokenResult, result, result2
 
     before(async () => {
-      result = await documentIdentifier.createVerifier('0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a', 'UN', 'Uninorte', { from: deployer })
-      verifiersSize = await documentIdentifier.verifiersSize()
+	  tokenResult = await documentIdentifier.refreshToken( { from: '0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd'} )
+      result = await documentIdentifier.verifyDocument('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', tokenResult.logs[0].args.token.toNumber(), ['FirstName','=','Alvaro'], { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
+	  result2 = await documentIdentifier.verifyDocument('0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd', 'CU', tokenResult.logs[0].args.token.toNumber(), ['FirstName','=','Alvaro'], { from: '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a' })
+    })
+	
+	it('refresh token', async () => {
+      // SUCCESS	  
+	  const event = tokenResult.logs[0].args
+	  assert.equal(event.documentHolder, '0xcB4f76d58da3379f20ffA7A41e4cab8e03e96BCd')
+	  assert.equal(event.tokenUsed, false)
     })
 
-    it('creates verifier', async () => {
+    it('succesful validation', async () => {
       // SUCCESS
-	  assert.equal(verifiersSize, 1)
 	  const event = result.logs[0].args 
-	  assert.equal(event.issuer, '0xfE3991C2Ab07A7064205cC2365b34Ce5f79f876a')
-	  assert.equal(event.id, 'UN')
-	  assert.equal(event.name, 'Uninorte')
+	  assert.equal(event.valid, true)
+    })
+	
+	it('failure validation', async () => {
+      // SUCCESS
+	  const event = result2.logs[0].args 
+	  assert.equal(event.valid, false)
     })
   })
 })
