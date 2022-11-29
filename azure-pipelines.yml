@@ -21,7 +21,7 @@ steps:
 - script: |
     npm install
     npm run build
-  displayName: 'NPM Install/Build'
+  displayName: 'Install NPM Dependencies'
 
 - script: |
     npm install solhint
