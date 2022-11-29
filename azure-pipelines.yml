@@ -20,6 +20,7 @@ steps:
 
 - script: |
     npm install
+    npm install -D lint
     npm run build
   displayName: 'NPM Install/Build'
 
