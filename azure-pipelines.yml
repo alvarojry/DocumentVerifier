@@ -20,11 +20,11 @@ steps:
 
 - script: |
     npm install
-    npm install solhint
     npm run build
   displayName: 'NPM Install/Build'
 
 - script: |
+    npm install solhint
     npx solhint --init
   displayName: 'Configure Linter'
 
