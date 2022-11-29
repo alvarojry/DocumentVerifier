@@ -33,7 +33,7 @@ steps:
 - task: GitHubComment@0
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), failed())
   inputs:
-    gitHubConnection: 'myGitHubConnection'
+    gitHubConnection: 'alvarojry'
     repositoryName: '$(Build.Repository.Name)'
     comment: |
       **Linter Error Details:**
